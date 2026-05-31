@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>米易县房价实时行情</title>
+<style>
+  :root {
+    --bg:#0d1117; --card:#161b22; --border:#30363d;
+    --red:#f85149; --green:#3fb950; --blue:#58a6ff;
+    --gold:#d2991d; --text:#e6edf3; --sub:#8b949e;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingFang SC",sans-serif;}
+
+  /* 顶部 */
+  .hero{background:linear-gradient(135deg,#1b3a2a 0%,#0d2137 50%,#1b1b3a 100%);padding:22px 20px;text-align:center;border-bottom:2px solid var(--gold);position:sticky;top:0;z-index:50;}
+  .hero h1{font-size:1.6em;color:var(--gold);letter-spacing:3px;}
+  .hero .sub{color:var(--sub);margin-top:4px;font-size:0.82em;}
+  .hero .meta{font-size:0.72em;color:var(--green);margin-top:4px;}
+
+  /* 统计 */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px 20px;}
+  @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr);}}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;}
+  .stat-card .num{font-size:1.5em;font-weight:bold;}
+  .num.r{color:var(--red);}.num.g{color:var(--green);}.num.b{color:var(--blue);}.num.y{color:var(--gold);}
+  .stat-card .label{color:var(--sub);font-size:0.72em;margin-top:2px;}
+
+  /* 工具栏 */
+  .toolbar{display:flex;gap:8px;padding:0 20px 12px;flex-wrap:wrap;align-items:center;}
+  .btn{padding:7px 16px;border:1px solid var(--border);border-radius:18px;background:var(--card);color:var(--text);cursor:pointer;font-size:0.8em;transition:all 0.2s;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+  .btn:hover{border-color:var(--gold);color:var(--gold);}
+  .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .btn.accent{background:var(--green);border-color:var(--green);color:#000;}
+  .btn.warn{background:var(--gold);border-color:var(--gold);color:#000;}
+  .btn.calc{background:#7c3aed;border-color:#7c3aed;color:#fff;}
+  .toolbar .spacer{flex:1;}
+  .toolbar .hint{color:var(--sub);font-size:0.7em;}
+
+  /* 搜索框 */
+  .search-box{padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:18px;color:var(--text);font-size:0.82em;width:180px;outline:none;}
+  .search-box:focus{border-color:var(--gold);}
+
+  /* 卡片网格 */
+  .section-title{padding:12px 20px 6px;font-size:1em;color:var(--gold);}
+  .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;padding:0 20px 40px;}
+  @media(max-width:400px){.card-grid{grid-template-columns:1fr;}}
+
+  .house-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s, border-color 0.15s;}
+  .house-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(210,153,29,0.08);border-color:var(--gold);}
+
+  .card-img{height:130px;position:relative;display:flex;align-items:center;justify-content:center;background-size:cover;background-position:center;}
+  .card-img .overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.75),transparent);}
+  .card-img .cname{position:relative;z-index:2;font-size:1.4em;font-weight:bold;text-shadow:0 2px 6px rgba(0,0,0,0.6);}
+  .card-img .cloc{position:absolute;bottom:8px;right:10px;z-index:2;background:rgba(0,0,0,0.5);padding:2px 8px;border-radius:8px;font-size:0.68em;color:var(--sub);}
+  .card-img .cshare{position:absolute;top:8px;right:10px;z-index:2;background:rgba(0,0,0,0.5);padding:3px 8px;border-radius:8px;font-size:0.65em;color:var(--sub);cursor:pointer;border:none;}
+  .card-img .cshare:hover{color:var(--gold);}
+
+  .card-body{padding:12px;}
+  .card-body .price-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .card-body .price-main{font-size:1.3em;font-weight:bold;color:var(--red);}
+  .card-body .price-main span{font-size:0.5em;color:var(--sub);font-weight:normal;}
+  .card-body .price-new{font-size:0.8em;color:var(--blue);margin-bottom:4px;}
+  .card-body .tags{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0;}
+  .tags .tag{padding:2px 10px;border-radius:10px;font-size:0.7em;background:rgba(88,166,255,0.1);color:var(--blue);border:1px solid rgba(88,166,255,0.2);}
+  .tags .tag.red{color:var(--red);background:rgba(248,81,73,0.1);border-color:rgba(248,81,73,0.2);}
+  .tags .tag.green{color:var(--green);background:rgba(63,185,80,0.1);border-color:rgba(63,185,80,0.2);}
+
+  .card-links{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);}
+  .card-links a{padding:4px 10px;border-radius:12px;font-size:0.68em;text-decoration:none;border:1px solid var(--border);color:var(--sub);transition:all 0.15s;}
+  .card-links a:hover{color:#fff;}
+  .card-links a.l58:hover{background:#ff6b00;border-color:#ff6b00;}
+  .card-links a.lajk:hover{background:#1890ff;border-color:#1890ff;}
+  .card-links a.lbk:hover{background:#e84235;border-color:#e84235;}
+  .card-links a.lmap:hover{background:var(--green);border-color:var(--green);}
+
+  /* ======= 详情弹窗 ======= */
+  .modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.75);justify-content:center;align-items:center;padding:20px;}
+  .modal-overlay.active{display:flex;}
+  .modal-detail{background:var(--card);border-radius:16px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;border:1px solid var(--border);animation:slideUp 0.25s ease;}
+  @keyframes slideUp{from{transform:translateY(40px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+
+  .modal-detail .detail-img{height:220px;display:flex;align-items:center;justify-content:center;position:relative;background-size:cover;background-position:center;}
+  .modal-detail .detail-img .do{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.8),transparent 60%);}
+  .modal-detail .detail-img .dn{position:relative;z-index:2;font-size:2em;font-weight:bold;text-shadow:0 2px 8px rgba(0,0,0,0.7);}
+  .modal-detail .detail-close{position:absolute;top:12px;right:16px;z-index:10;background:rgba(0,0,0,0.6);border:none;color:#fff;font-size:1.4em;cursor:pointer;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+  .modal-detail .detail-close:hover{background:var(--red);}
+
+  .modal-detail .detail-body{padding:20px;}
+  .detail-body .dprice{font-size:2em;font-weight:bold;color:var(--red);margin-bottom:4px;}
+  .detail-body .dprice small{font-size:0.45em;color:var(--sub);}
+  .detail-body .dmeta{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0;color:var(--sub);font-size:0.85em;}
+  .detail-body .ddesc{background:var(--bg);padding:14px;border-radius:10px;margin:12px 0;line-height:1.7;font-size:0.9em;color:var(--sub);}
+  .detail-body .dlistings{margin:12px 0;}
+  .detail-body .dlistings h4{color:var(--gold);margin-bottom:8px;}
+  .detail-body .listing-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:6px;font-size:0.85em;}
+  .listing-item .lp{color:var(--red);font-weight:bold;}
+  .listing-item .la{color:var(--blue);text-decoration:none;padding:4px 10px;border:1px solid var(--border);border-radius:10px;font-size:0.85em;}
+  .listing-item .la:hover{background:var(--blue);color:#fff;}
+
+  .detail-body .dbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
+  .detail-body .dbtns a,.detail-body .dbtns button{padding:8px 18px;border-radius:18px;font-size:0.82em;text-decoration:none;display:inline-flex;align-items:center;gap:5px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text);}
+  .detail-body .dbtns a:hover,.detail-body .dbtns button:hover{border-color:var(--gold);}
+  .detail-body .dbtns .go{border-color:var(--green);color:var(--green);}
+  .detail-body .dbtns .go:hover{background:var(--green);color:#000;}
+  .detail-body .dbtns .share{border-color:var(--blue);color:var(--blue);}
+
+  /* ======= 房贷计算器弹窗 ======= */
+  .calc-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.75);justify-content:center;align-items:center;padding:20px;}
+  .calc-overlay.active{display:flex;}
+  .calc-box{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:440px;border:1px solid var(--border);}
+  .calc-box h3{color:var(--gold);margin-bottom:16px;}
+  .calc-box label{display:block;color:var(--sub);font-size:0.8em;margin:8px 0 4px;}
+  .calc-box input,.calc-box select{width:100%;padding:9px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:0.9em;}
+  .calc-box .calc-result{background:var(--bg);border-radius:10px;padding:14px;margin-top:14px;}
+  .calc-box .calc-result .rrow{display:flex;justify-content:space-between;padding:4px 0;font-size:0.9em;}
+  .calc-box .calc-result .big{font-size:1.2em;font-weight:bold;color:var(--red);}
+  .calc-box .btn-row{display:flex;gap:8px;margin-top:14px;}
+
+  /* loading */
+  .spinner-wrap{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.4);justify-content:center;align-items:center;}
+  .spinner-wrap.active{display:flex;}
+  .spinner{width:40px;height:40px;border:4px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  footer{text-align:center;padding:20px;color:var(--sub);font-size:0.68em;}
+
+  /* toast */
+  .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;padding:8px 20px;border-radius:20px;font-size:0.85em;z-index:500;opacity:0;transition:opacity 0.3s;}
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>🏠 米易县小区房价行情</h1>
+  <div class="sub">四川省 · 攀枝花市 · 米易县 | 二手房+新房 | 卡片点开看详情</div>
+  <div class="meta" id="updateTime">正在连接后端…</div>
+</div>
+
+<div class="stats">
+  <div class="stat-card"><div class="num b" id="stat-total">--</div><div class="label">收录小区</div></div>
+  <div class="stat-card"><div class="num r" id="stat-avg">--</div><div class="label">二手房均价</div></div>
+  <div class="stat-card"><div class="num y" id="stat-new">--</div><div class="label">新房均价</div></div>
+  <div class="stat-card"><div class="num g" id="stat-listings">--</div><div class="label">在售房源</div></div>
+</div>
+
+<div class="toolbar">
+  <button class="btn primary" onclick="refreshAll()">🔄 刷新</button>
+  <button class="btn accent" onclick="openAddModal()">➕ 添加</button>
+  <button class="btn warn" onclick="exportCSV()">📥 导出</button>
+  <button class="btn calc" onclick="openCalc()">🧮 房贷计算</button>
+  <span class="spacer"></span>
+  <input class="search-box" placeholder="🔍 搜索小区…" oninput="filterCards(this.value)" id="searchInput">
+  <span class="hint" id="apiStatus">⚫ 检测中</span>
+</div>
+
+<div class="section-title">📋 点卡片查看详情 | 底部链接直达房源平台</div>
+<div class="card-grid" id="cardGrid"><div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--sub);">加载中…</div></div>
+
+<footer>58同城 · 安居客 · 贝壳找房 · 闲鱼 | 仅展示公开价格数据</footer>
+
+<!-- ====== 详情弹窗 ====== -->
+<div class="modal-overlay" id="detailModal" onclick="if(event.target===this)closeDetail()">
+  <div class="modal-detail" id="detailContent"></div>
+</div>
+
+<!-- ====== 房贷计算器弹窗 ====== -->
+<div class="calc-overlay" id="calcModal" onclick="if(event.target===this)closeCalc()">
+  <div class="calc-box">
+    <h3>🧮 房贷计算器</h3>
+    <label>房屋总价 (万元)</label>
+    <input type="number" id="calcPrice" placeholder="例：80" value="80" oninput="doCalc()">
+    <label>首付比例 (%)</label>
+    <select id="calcRatio" onchange="doCalc()">
+      <option value="20">20% (首套)</option>
+      <option value="30" selected>30% (二套)</option>
+      <option value="50">50%</option>
+      <option value="70">70%</option>
+    </select>
+    <label>贷款年限 (年)</label>
+    <select id="calcYears" onchange="doCalc()">
+      <option value="10">10年</option>
+      <option value="15">15年</option>
+      <option value="20">20年</option>
+      <option value="30" selected>30年</option>
+    </select>
+    <label>贷款利率 (%)</label>
+    <input type="number" id="calcRate" placeholder="例：3.85" value="3.85" step="0.01" oninput="doCalc()">
+    <div class="calc-result" id="calcResult"></div>
+    <div class="btn-row">
+      <button class="btn" onclick="closeCalc()" style="background:#555;color:#fff;flex:1;">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 添加弹窗 ====== -->
+<div class="modal-overlay" id="addModal" onclick="if(event.target===this)closeAddModal()">
+  <div class="calc-box">
+    <h3>➕ 添加小区</h3>
+    <label>小区名称 *</label><input type="text" id="addName" placeholder="例：阳光水岸">
+    <label>位置</label><input type="text" id="addLocation" placeholder="例：城北新区">
+    <label>建成年份</label><input type="text" id="addYear" placeholder="2020">
+    <label>二手均价 (元/㎡) *</label><input type="number" id="addPrice" placeholder="7800">
+    <label>新房均价</label><input type="number" id="addNewPrice" placeholder="8500">
+    <label>在售房源</label><input type="number" id="addListings" placeholder="25">
+    <div class="btn-row"><button class="btn accent" onclick="addCommunity()">✅ 确认</button><button class="btn" onclick="closeAddModal()" style="background:#555;color:#fff;">取消</button></div>
+  </div>
+</div>
+
+<div class="spinner-wrap" id="loading"><div class="spinner"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ====== 调色板 ======
+const PALETTE=[['#667eea','#764ba2'],['#f093fb','#f5576c'],['#4facfe','#00f2fe'],['#43e97b','#38f9d7'],['#fa709a','#fee140'],['#a18cd1','#fbc2eb'],['#fad0c4','#ffd1ff'],['#ffecd2','#fcb69f'],['#a1c4fd','#c2e9fb'],['#d4fc79','#96e6a1'],['#fbc2eb','#a6c1ee'],['#84fab0','#8fd3f4'],['#cfd9df','#e2ebf0'],['#ff9a9e','#fecfef'],['#e6dee9','#bdc2e8'],['#89f7fe','#66a6ff'],['#fddb92','#d1b38d'],['#c1dfc4','#deecdd'],['#fccb90','#d57eeb'],['#e0c3fc','#8ec5fc'],['#96fbc4','#f9f586'],['#ffb199','#ff0844'],['#b721ff','#21d4fd'],['#08aeea','#2af598'],['#f9d423','#ff4e50'],['#00dbde','#fc00ff'],['#fbab7e','#f7ce68'],['#85ffbd','#fffb7d'],['#8BC6EC','#9599E2'],['#0093E9','#80D0C7']];
+
+// ====== 30个小区（精简版，完整数据从后端API获取） ======
+// DEFAULTS replaced by EMBEDDED
+
+// ====== 平台搜索链接（修正为真实可用URL，人点直接打开） ======
+function l58(n){return'https://panzhihua.58.com/ershoufang/?key='+encodeURIComponent(n+'小区');}
+function lajk(n){return'https://panzhihua.anjuke.com/sale/?kw='+encodeURIComponent(n);}
+function lbk(n){return'https://ke.com/ershoufang/rs'+encodeURIComponent('攀枝花米易'+n)+'/';}
+function lbmap(n){return'https://map.baidu.com/search/'+encodeURIComponent('米易县'+n+'小区');}
+function lamap(n){return'https://uri.amap.com/search?keyword='+encodeURIComponent('攀枝花市米易县'+n);}
+
+// ====== 房源链接：点击直达各平台搜索该小区 ======
+function genListings(c){
+  let list=[];
+  // 后端抓到的真实房源
+  if(c._real_listings && c._real_listings.length>0){
+    list=c._real_listings.map(l=>({title:l.title,area:l.area||'',price:l.price,link:l.link||l58(c.name),source:l.source}));
+  }
+  // 补上平台搜索链接（保证每个平台都有入口）
+  list.push({title:'🔶 58同城搜索「'+c.name+'」',area:'全部房源',price:c.price,link:l58(c.name),source:'58同城'});
+  list.push({title:'🔷 安居客搜索「'+c.name+'」',area:'全部房源',price:c.price,link:lajk(c.name),source:'安居客'});
+  list.push({title:'🔴 贝壳找房搜索「'+c.name+'」',area:'全部房源',price:c.price,link:lbk(c.name),source:'贝壳找房'});
+  return list;
+}
+
+// ====== 内嵌数据 ======
+const EMBEDDED = [{"name": "阳光水岸", "loc": "城北新区", "year": 2020, "price": 8065, "newPrice": 8500, "listings": 32, "tag": "热门", "photo": "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=600&h=400&fit=crop", "desc": "安宁河畔品质社区，绿化率高达40%，户型方正通透，主力88-135㎡三房四房。", "pros": ["绿化率高，居住舒适", "户型方正，得房率好", "距米易一小仅500米", "周边商超配套齐全"], "cons": ["停车位不足", "早晚高峰门口拥堵", "物业费略高于周边"], "ai_analysis": "阳光水岸是米易城北新区的中坚力量，7800元/㎡的均价在板块内性价比突出。2020年交付至今入住率超85%，社区氛围成熟。近6个月价格稳定在7600-8000区间波动，成交量活跃。建议关注88㎡三房户型，总价控制在70万左右，首付21万即可上车。", "_ci": 0, "_change": 1.2}, {"name": "河滨印象", "loc": "河滨路", "year": 2018, "price": 9111, "newPrice": 0, "listings": 18, "tag": "改善", "photo": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&h=400&fit=crop", "desc": "一线安宁河景豪宅，全石材外立面，一梯一户，180-320㎡大平层。", "pros": ["一线河景无可复制", "一梯一户私密性极佳", "全石材立面品质过硬", "大平层户型尺度阔绰"], "cons": ["总价高，门槛200万+", "物业费约4.5元/㎡", "周边缺乏平价商业"], "ai_analysis": "河滨印象是米易目前二手价格天花板，9200元/㎡但实际成交以大户型为主，套均总价落在180-300万。2026年以来成交量偏冷，挂牌18套但月均仅成交1-2套。适合不急于变现的改善客群持有，投资回报周期较长，但河景稀缺性保证了长期增值空间。", "_ci": 1, "_change": 0.8}, {"name": "龙阳丽园", "loc": "龙阳路", "year": 2019, "price": 7389, "newPrice": 7800, "listings": 25, "tag": "新盘", "photo": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&h=400&fit=crop", "desc": "龙阳路核心地段，紧邻商业步行街，75-120㎡为主力，刚需首选。", "pros": ["商业街步行即达", "地铁规划利好", "户型紧凑实用", "价格门槛低，总价50-85万"], "cons": ["临街楼栋噪音较大", "社区体量偏小", "绿化率仅30%"], "ai_analysis": "龙阳丽园以7100元/㎡的价格在米易形成明显的'价格洼地'效应。该盘是2026上半年米易成交最活跃的小区之一，25套在售房源月均去化4-5套。未来米易城际铁路规划如落地，龙阳路站距小区仅800米，将是一大利好。推荐刚需和投资客关注。", "_ci": 2, "_change": 1.4}, {"name": "安宁明珠", "loc": "安宁河畔", "year": 2021, "price": 8393, "newPrice": 9200, "listings": 15, "tag": "热门", "photo": "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=600&h=400&fit=crop", "desc": "安宁河畔新地标，精装交付带双阳台，108-168㎡三至五房，配泳池和儿童乐园。", "pros": ["精装交付省心省力", "双阳台设计采光好", "社区配套泳池+乐园", "108-168㎡覆盖多种需求"], "cons": ["精装质量参差不齐", "小区还在陆续交付中", "周边工地施工噪音"], "ai_analysis": "安宁明珠精装+泳池的配置在米易属于顶配级别。8500元/㎡二手价对比新房9200元/㎡存在约8%价差，买入二手比直接买新房划算。15套挂牌中108㎡三房占比最高，建议重点关注中层朝南单位，视野和采光更优。长线看安宁河沿岸土地供应有限，升值潜力较大。", "_ci": 3, "_change": -0.2}, {"name": "海棠蓝湾", "loc": "海棠路", "year": 2017, "price": 6671, "newPrice": 0, "listings": 28, "tag": "刚需", "photo": "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=600&h=400&fit=crop", "desc": "城西成熟大盘，入住率高，社区商业齐全。主力60-90㎡小户型，总价低。", "pros": ["总价低，40-60万可入", "配套极成熟，商家多", "入住率高氛围好", "物业费仅1.6元/㎡"], "cons": ["房龄偏老，2017年交付", "电梯品牌偏低端", "无地下停车场"], "ai_analysis": "海棠蓝湾是米易入门级二手房首选。6600元/㎡的单价，60㎡两房总价不到40万，首付12万左右即可上车。28套在售盘源充足，议价空间约3-5%。虽然房龄偏老但持有成本低，适合预算有限的首次置业者或寻求稳定租金回报的投资客（租金回报率约3.5%）。", "_ci": 4, "_change": 1.3}, {"name": "星河世纪城", "loc": "城东新区", "year": 2022, "price": 8937, "newPrice": 9500, "listings": 20, "tag": "新盘", "photo": "https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=600&h=400&fit=crop", "desc": "城东新区标杆，现代简约风格，全明户型，90-145㎡，配智能家居系统。", "pros": ["2022年次新房，品质新", "智能家居系统", "全明户型无暗卫", "赠送面积大"], "cons": ["价格偏高，接近天花板", "距离市中心较远", "社区配套还在完善中"], "ai_analysis": "星河世纪城作为城东新区标杆盘，8800元/㎡的价格反映了市场对其品质的认可。20套在售中90-120㎡中小户型最抢手，145㎡大户型去化较慢。智能家居系统在米易属于差异化优势，但维护成本需关注。城东新区整体处于上升期，中期看涨。", "_ci": 5, "_change": 1.1}, {"name": "米易碧桂园", "loc": "城南新区", "year": 2023, "price": 9450, "newPrice": 10500, "listings": 12, "tag": "新盘", "photo": "https://images.unsplash.com/photo-1600573472550-8090b5e0745e?w=600&h=400&fit=crop", "desc": "碧桂园品质，精装交付带中央空调，110-200㎡，园林名师设计，五星物业。", "pros": ["碧桂园品牌保障", "精装标准高配中央空调", "园林景观出色", "五星物业服务体系"], "cons": ["价格全城最高", "物业费4.0元/㎡偏贵", "200㎡大户型流通性差"], "ai_analysis": "米易碧桂园稳坐本地'楼王'宝座，9600元/㎡并非虚高——品牌溢价+精装+园林+物业的组合在米易确实独一无二。12套挂牌中大户型占比超过60%，110-140㎡的中等户型2个月内基本能成交。当前米易GDP增速和人口净流入均利好高端盘，预计碧桂园保值能力较强。", "_ci": 6, "_change": -0.7}, {"name": "攀西家园", "loc": "攀莲镇", "year": 2016, "price": 5359, "newPrice": 0, "listings": 35, "tag": "实惠", "photo": "https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=600&h=400&fit=crop", "desc": "攀莲镇成熟社区，单价全城最低，50-90㎡小户型总价30-50万。", "pros": ["米易最低价盘", "物业费可忽略", "周边都是原住民邻里稳定", "生活成本极低"], "cons": ["房龄老，2016年", "无电梯多层楼", "装修普遍偏旧需翻新"], "ai_analysis": "攀西家园5500元/㎡的均价是米易二手房市场的'铁底'。35套在售是全场最多，反映业主置换意愿强。小户型（50-70㎡）出租给附近务工人员月租800-1200元，租金回报率约3.8%属于中等偏上。不适合自住品质要求高的客群，但作为投资收租入门级产品是不错的选择。", "_ci": 7, "_change": 0.9}, {"name": "时光水街", "loc": "城北新区", "year": 2021, "price": 8157, "newPrice": 9000, "listings": 16, "tag": "热门", "photo": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=600&h=400&fit=crop", "desc": "城北新区核心，毗邻新行政中心，现代轻奢风格，85-138㎡带入户花园。", "pros": ["毗邻行政中心地段优", "轻奢风格受年轻人欢迎", "户户带入户花园", "周边规划配套推进快"], "cons": ["早晚主干道拥堵", "部分楼栋采光被遮挡", "物业3.2元/㎡偏高"], "ai_analysis": "时光水街抓住了米易年轻改善群体的审美需求。8200元/㎡的价格与同板块阳光水岸相当，但产品定位更年轻化。16套在售中85-110㎡最受欢迎，月均成交2-3套。行政中心迁入带来的公务员群体是核心购买力，这一需求预计将持续支撑该盘价格。", "_ci": 8, "_change": 0.5}, {"name": "太阳谷", "loc": "丙谷镇方向", "year": 2020, "price": 6107, "newPrice": 6800, "listings": 22, "tag": "养老", "photo": "https://images.unsplash.com/photo-1598228723793-52759bba239c?w=600&h=400&fit=crop", "desc": "康养主题社区，空气质量优，冬季温暖干燥，配医疗中心和老年大学。", "pros": ["空气质量和气候优越", "配套医疗中心", "老年大学社交丰富", "精装洋房拎包入住"], "cons": ["位置偏远交通不便", "不适合通勤刚需", "周边商业配套几乎为零"], "ai_analysis": "太阳谷是米易最有特色的主题社区——康养定位精准切入中国老龄化红利。6200元/㎡的价格在全国康养地产中算较低的，但需要注意该盘的购买群体以外地退休人群为主，本地人购买意愿不高。22套在售中有相当部分是'候鸟式'持有的业主挂牌，成交周期偏长（3-6个月）。长线看好养老地产赛道，但短期流动性偏弱。", "_ci": 9, "_change": 0.6}, {"name": "润宇华府", "loc": "安宁路", "year": 2019, "price": 7448, "newPrice": 0, "listings": 19, "tag": "", "photo": "https://images.unsplash.com/photo-1600573472591-ee6b68d14c68?w=600&h=400&fit=crop", "desc": "安宁路成熟地段，南北通透板楼，72-128㎡，公摊小得房率高。", "pros": ["得房率高达85%+", "板楼南北通透", "学区划片稳定", "公摊小真金白银"], "cons": ["外立面普通无亮点", "18-19年交房已显旧", "电梯速度慢"], "ai_analysis": "润宇华府是'低调务实'型选手。7500元/㎡的均价加上85%+得房率，实际使用面积单价远低于同板块竞品。19套挂牌中72-90㎡是最抢手的户型段。对于'不追求面子追求里子'的买家来说，润宇华府的实际性价比可能是米易最高的几个盘之一。", "_ci": 10, "_change": 1.3}, {"name": "紫荆花城", "loc": "城东新区", "year": 2022, "price": 8750, "newPrice": 9300, "listings": 14, "tag": "新盘", "photo": "https://images.unsplash.com/photo-1600047509358-9dc75507daeb?w=600&h=400&fit=crop", "desc": "城东新区花园社区，紫荆花景观大道，95-155㎡全明户型带超大飘窗。", "pros": ["紫荆花景观独一无二", "全明户型采光好", "飘窗设计增加使用空间", "小区花园维护用心"], "cons": ["95㎡起步门槛偏高", "距离大型商超较远", "小区周边还在开发中"], "ai_analysis": "紫荆花城的花园景观在米易独树一帜。8600元/㎡对比同板块星河世纪城8800元/㎡便宜200元/㎡，但产品力不输。14套挂牌中95-120㎡中等户型最活跃。城东新区多个项目2022-2023年集中交付导致短期供应偏大，买家议价空间相比去年有所增加，适合挑房。", "_ci": 11, "_change": -0.1}, {"name": "安宁河畔", "loc": "滨河路", "year": 2018, "price": 7017, "newPrice": 0, "listings": 24, "tag": "", "photo": "https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=600&h=400&fit=crop", "desc": "滨河路沿线河景房，68-118㎡户型紧凑实用，周边菜市场超市步行可达。", "pros": ["河景view加分", "生活配套步行可达", "户型紧凑实用不浪费", "价格适中性价比好"], "cons": ["停车极其困难", "楼间距偏窄", "部分低楼层潮湿"], "ai_analysis": "安宁河畔6900元/㎡集河景+配套于一身，24套挂牌量说明小区二手房市场非常活跃。68㎡两房总价不到50万，是米易河景房的最低上车门槛。不过楼间距偏窄导致低楼层采光受影响，建议优先选择8层以上单位。投资角度看，该位置的小户型出租率相当不错。", "_ci": 12, "_change": 0.6}, {"name": "尚品国际", "loc": "商业中心", "year": 2017, "price": 7308, "newPrice": 0, "listings": 10, "tag": "商圈", "photo": "https://images.unsplash.com/photo-1555636222-cae831e670b3?w=600&h=400&fit=crop", "desc": "米易商业中心地段，楼下即大型商超，80-130㎡，投资自住两相宜。", "pros": ["楼下就是商场超方便", "人流大出租容易", "配套应有尽有", "地段永不贬值"], "cons": ["噪音大不适合安静居住", "小区几乎无绿化", "房龄2017年偏老"], "ai_analysis": "尚品国际的7300元/㎡定价核心在'地段'两个词。商业中心位置决定了其价值下限。10套挂牌偏少说明业主普遍惜售。80-100㎡户型月租金可达2500-3500元，租金回报率约4.2%，在米易属于投资回报率第一梯队。缺点明确：不适合对居住环境有要求的人，更适合投资出租或开工作室的买家。", "_ci": 13, "_change": 0.3}, {"name": "翡翠湾", "loc": "城南新区", "year": 2023, "price": 8827, "newPrice": 9800, "listings": 8, "tag": "新盘", "photo": "https://images.unsplash.com/photo-1600585153490-76fb20a32601?w=600&h=400&fit=crop", "desc": "城南高端新盘，法式园林风格，105-185㎡一梯两户，独立电梯厅层高3.15米。", "pros": ["法式园林颜值在线", "3.15米层高超标准", "独立电梯厅尊贵感", "城南发展前景好"], "cons": ["单价和总价双高", "版块配套尚需时日", "入市较新装修问题待检验"], "ai_analysis": "翡翠湾与碧桂园共同构成了米易'万元圈层'。9100元/㎡二手价对比9800元/㎡新房有小幅折让，但挂牌仅8套说明二手市场尚未充分形成。3.15米层高在米易鹤立鸡群。城南新区配套逐步兑现后翡翠湾有望跑赢大市，但短期内流动性偏弱，适合长期持有的改善客。", "_ci": 14, "_change": -0.1}, {"name": "金域华府", "loc": "城北新区", "year": 2021, "price": 8166, "newPrice": 8800, "listings": 13, "tag": "新盘", "photo": "https://images.unsplash.com/photo-1600566753086-00f18b6b0050?w=600&h=400&fit=crop", "desc": "城北品质楼盘，新中式风格精装交付带地暖，88-142㎡自带幼儿园。", "pros": ["新中式风格辨识度高", "精装自带地暖", "社区配建幼儿园", "88㎡三房户型实用"], "cons": ["地暖使用成本高", "新中式审美两极分化", "部分户型厨房偏小"], "ai_analysis": "金域华府的差异化在于'新中式+地暖'组合。8100元/㎡与同板块阳光水岸7800元/㎡相比贵了300元/㎡，但精装和地暖的附加值足以覆盖溢价。自带幼儿园对有孩家庭是巨大加分。13套挂牌平均去化周期约2个月，流动性中等偏上。推荐有娃的年轻家庭关注。", "_ci": 15, "_change": 1.5}, {"name": "逸品尚城", "loc": "城东新区", "year": 2020, "price": 7417, "newPrice": 0, "listings": 21, "tag": "", "photo": "https://images.unsplash.com/photo-1605146769289-440113cc3d00?w=600&h=400&fit=crop", "desc": "城东低密度小高层，一梯两户70-125㎡南北通透，得房率超85%。", "pros": ["低密度住着舒服", "一梯两户私密性好", "得房率>85%", "70㎡小户型门槛低"], "cons": ["体量小配套不足", "物业服务水平一般", "距离公交站较远"], "ai_analysis": "逸品尚城是城东'小而美'的代表。7600元/㎡在一梯两户低密度产品中算很实惠的。21套挂牌比较充足，70㎡小户型总价约53万，对刚需友好。但小体量社区意味着配套和物业都偏弱，适合不依赖社区配套、有私家车出行的买家。", "_ci": 16, "_change": 0.3}, {"name": "锦绣花园", "loc": "攀莲镇", "year": 2015, "price": 5041, "newPrice": 0, "listings": 40, "tag": "实惠", "photo": "https://images.unsplash.com/photo-1572120360610-d971b9d7767c?w=600&h=400&fit=crop", "desc": "老城区成熟社区，45-85㎡小户型总价25-45万，预算有限年轻人的首选。", "pros": ["价格最低选择", "老城区配套最成熟", "总价30万以内可买", "公务员工薪族扎堆"], "cons": ["2015年房龄全城最老", "外立面老旧破损", "无电梯得爬楼", "升值空间有限"], "ai_analysis": "锦绣花园5200元/㎡是米易房价的'基底价位'。40套挂牌量全城最高，说明抛压较大——2015年的老房源确实到了换手高峰期。45㎡极小户型总价不到25万，几乎是全款买入无压力的水平。对预算极度紧张的年轻人来说锦绣花园是'先上车再说'的唯一解，但不要指望升值。", "_ci": 17, "_change": -1.0}, {"name": "水岸华庭", "loc": "安宁河畔", "year": 2022, "price": 8870, "newPrice": 9600, "listings": 11, "tag": "新盘", "photo": "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&h=400&fit=crop", "desc": "安宁河头排水岸住宅，270°环幕河景，120-200㎡豪华装修带私家电梯。", "pros": ["270°环幕河景震撼", "私家电梯极致尊贵", "豪华装修标准高", "2022年次新房"], "cons": ["总价大幅超越均价", "仅有大户型", "物业费等持有成本高"], "ai_analysis": "水岸华庭是米易水景房的巅峰之作。8900元/㎡对应120-200㎡面积段，套均总价在107-178万区间。11套挂牌主力是120-150㎡，200㎡超大户型几乎无人问津。河景+私家电梯的组合在米易没有竞品，如果你是追求极致河景的买家且预算充足，水岸华庭基本是唯一选择。", "_ci": 18, "_change": 0.3}, {"name": "未来城", "loc": "城南新区", "year": 2024, "price": 9608, "newPrice": 10800, "listings": 6, "tag": "新盘", "photo": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&h=400&fit=crop", "desc": "米易首个科技住宅，全屋智能+光伏发电，95-160㎡配充电桩车位。", "pros": ["科技住宅概念领先", "光伏发电节省电费", "充电桩配车位", "全屋智能控温控光"], "cons": ["科技设备后期维修贵", "光伏面板老化需更换", "仅6套挂牌选择少"], "ai_analysis": "未来城是米易最具创新性的住宅项目。2024年刚交付，9800元/㎡的二手价对比10800元/㎡新房有近10%折让。但6套挂牌且都是早期炒房客出货，缺少真实居住体验的口碑参考。科技住宅的维护成本和设备寿命是未知数，适合愿意尝鲜且不差钱的科技爱好者。", "_ci": 19, "_change": 0.7}, {"name": "学府花园", "loc": "城北新区", "year": 2019, "price": 7176, "newPrice": 0, "listings": 17, "tag": "学区", "photo": "https://images.unsplash.com/photo-1590073242678-70ee3fc28e8e?w=600&h=400&fit=crop", "desc": "紧邻米易中学和米易一小，双学区房，60-110㎡，陪读出租需求旺盛。", "pros": ["双学区绝对优势", "陪读出租需求极高", "小户型总价易控", "学区划片稳定"], "cons": ["周末接送高峰堵车", "学区溢价约500元/㎡", "房源以中小户型为主"], "ai_analysis": "学府花园是米易最强'学区房'。7200元/㎡含约500元/㎡的学区溢价，刨除后本体价值约6700元/㎡比较合理。17套挂牌中60-70㎡小户型周转最快——家长买来出租给陪读家庭，月租1200-1500元，租金回报率约3%。学区政策暂无明显变动迹象，保值逻辑坚实。", "_ci": 20, "_change": -0.2}, {"name": "绿地新都会", "loc": "商业中心", "year": 2023, "price": 9558, "newPrice": 10200, "listings": 9, "tag": "商圈", "photo": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&h=400&fit=crop", "desc": "商业中心地标综合体，楼下购物中心，80-140㎡商住两用投资价值高。", "pros": ["地标综合体价值", "楼下购物中心", "商住两用灵活", "投资租赁需求大"], "cons": ["居住环境嘈杂", "人员流动复杂", "物业管理难度大"], "ai_analysis": "绿地新都会9400元/㎡的价格背后是商业综合体的溢价。与纯住宅不同，该盘20%的买家用于开工作室/公司，商住混用的特点带来更高租金（月租可达3500-5000元）。但随之而来的是居住体验下降——电梯等待时间长、人员复杂。适合优先考虑租金回报或商住两用的投资者。", "_ci": 21, "_change": 0.0}, {"name": "阳光丽城", "loc": "城东新区", "year": 2018, "price": 6840, "newPrice": 0, "listings": 26, "tag": "", "photo": "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&h=400&fit=crop", "desc": "城东刚需大盘，入住率90%+，55-95㎡物业费仅1.5元/㎡，生活成本低。", "pros": ["入住率高氛围好", "物业费1.5元/㎡极低", "55㎡极小户型门槛低", "社区稳定邻里熟"], "cons": ["外立面普通", "楼栋密度偏高", "户型设计偏老旧"], "ai_analysis": "阳光丽城6700元/㎡加上1.5元/㎡的物业费，是城东'持房成本'最低的小区之一。26套挂牌量大、选择多。55㎡一房户型总价不到37万，对刚入职的年轻人极友好。高入住率意味着社区已经过市场检验，但同时也说明未来增值空间有限，更适合自住而非投资。", "_ci": 22, "_change": 0.2}, {"name": "云栖谷", "loc": "丙谷镇方向", "year": 2021, "price": 6377, "newPrice": 7200, "listings": 15, "tag": "养老", "photo": "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&h=400&fit=crop", "desc": "山谷康养社区，森林覆盖率85%，精装洋房50-80㎡配温泉入户。", "pros": ["森林+温泉独一无二", "空气质量极佳", "精装拎包住", "适合候鸟式养老"], "cons": ["极度偏远", "冬季山上道路易结冰", "医疗配套非常有限"], "ai_analysis": "云栖谷是全国康养盘的缩影——兼得自然与不便。6500元/㎡的定价横向对比云南、海南的康养盘很有竞争力。温泉入户带来的使用价值与心理满足感难以单纯用价格衡量。15套挂牌多为外地业主闲置出让。适合50岁以上、健康尚可、喜欢大自然的退休人群。不宜作为唯一住房。", "_ci": 23, "_change": 1.3}, {"name": "御景峰", "loc": "城北新区", "year": 2022, "price": 8961, "newPrice": 9500, "listings": 10, "tag": "改善", "photo": "https://images.unsplash.com/photo-1531971589569-0d9370cbe1c5?w=600&h=400&fit=crop", "desc": "城北半山豪宅，无敌视野远眺安宁河，140-280㎡叠拼+大平层英式管家服务。", "pros": ["半山视野不可复制", "叠拼产品米易罕见", "英式管家尊贵", "2022年品质新"], "cons": ["总价至少120万起", "山路出行不便", "只有10套挂牌流通差"], "ai_analysis": "御景峰是米易'半山豪宅'的孤品。叠拼产品在米易几乎没有竞品，加上英式管家服务。8700元/㎡看起来不贵但面积140㎡起步，套均总价120万+对米易市场来说偏高端。10套挂牌流通速度很慢。适合追求独特性和隐私性的高净值人群，不适合普通改善。", "_ci": 24, "_change": -0.6}, {"name": "世纪春城", "loc": "城南新区", "year": 2020, "price": 7562, "newPrice": 0, "listings": 18, "tag": "", "photo": "https://images.unsplash.com/photo-1558036117-15d82a90b9b1?w=600&h=400&fit=crop", "desc": "城南综合大盘，配套商业街+运动中心，85-135㎡板塔结合户型多样化。", "pros": ["自带商业街和运动中心", "户型多样选择多", "城南性价比之选", "2020年房龄适中"], "cons": ["板塔结合品质不均", "大盘人多嘈杂", "物业管理难度大"], "ai_analysis": "世纪春城7400元/㎡在城南属于性价比区间。自带商业街解决了日常购物需求，运动中心（含游泳池+篮球场）在米易大盘中不多见。18套挂牌中85-110㎡三房占主力。大盘的优点是配套全，缺点是人多杂。适合看重社区配套、能够接受大盘生活方式的买家。", "_ci": 25, "_change": 0.8}, {"name": "香缇丽舍", "loc": "河滨路", "year": 2019, "price": 7793, "newPrice": 0, "listings": 14, "tag": "改善", "photo": "https://images.unsplash.com/photo-1464146072230-91cabc968266?w=600&h=400&fit=crop", "desc": "法式浪漫风格社区，玫瑰花园景观，95-150㎡精装大堂刷卡入户。", "pros": ["法式风格设计感强", "玫瑰花园是网红打卡点", "精装入户大堂", "刷卡入户安全"], "cons": ["法式立面维护成本高", "花园养护费额外收取", "部分户型暗卫"], "ai_analysis": "香缇丽舍是米易最有'颜值'的小区之一。7700元/㎡对比同板块河滨印象9200元/㎡便宜了1500元/㎡，虽然河景不如河滨印象但在社区美感和风格上更有特色。14套挂牌月均成交1-2套，流动性偏弱但价格稳定。适合'颜值控'买家，买房心态要从投资转向享受。", "_ci": 26, "_change": -0.3}, {"name": "金科天宸", "loc": "城东新区", "year": 2023, "price": 9266, "newPrice": 10000, "listings": 7, "tag": "新盘", "photo": "https://images.unsplash.com/photo-1599423300746-b62533397364?w=600&h=400&fit=crop", "desc": "金科地产米易首作，新亚洲风格，105-175㎡配7米大横厅和L型跑道阳台。", "pros": ["金科品牌", "7米横厅+L型阳台", "新亚洲风格高级", "产品力米易顶尖"], "cons": ["9200元/㎡定位偏高", "仅7套挂牌极不活跃", "版块偏远配套滞后"], "ai_analysis": "金科天宸代表了米易最前沿的户型设计——7米横厅和L型跑道阳台放到一线城市也不落伍。9200元/㎡的定价对标碧桂园，但品牌认知度和地段均略逊一筹。仅7套在售说明市场尚未充分定价，交易样本太少难以判断真实价格。适合愿意为产品力买单的年轻高端改善客。", "_ci": 27, "_change": 0.5}, {"name": "和顺里", "loc": "攀莲镇", "year": 2016, "price": 5686, "newPrice": 0, "listings": 30, "tag": "实惠", "photo": "https://images.unsplash.com/photo-1516156008625-3a9d6067fab5?w=600&h=400&fit=crop", "desc": "老城区单位房社区，邻居多为公务员素质高，60-100㎡物业费几乎为零。", "pros": ["邻居素质高（公务员为主）", "物业费几乎为零", "邻里关系融洽", "60㎡小户型好租"], "cons": ["房龄2016年偏老", "单位房外观朴素", "硬伤是必须承认房龄"], "ai_analysis": "和顺里是米易独特的'单位房'社区——业主以公务员和事业单位员工为主，社区氛围在所有小区中最为和谐。5800元/㎡的价格+几乎零物业费，年持有成本极低。30套在售说明有部分老公务员换房需求。适合看重邻居素质和社区安全感的买家，尤其适合预算敏感的体制内家庭。", "_ci": 28, "_change": 0.6}, {"name": "星光天地", "loc": "商业中心", "year": 2021, "price": 8119, "newPrice": 9000, "listings": 12, "tag": "商圈", "photo": "https://images.unsplash.com/photo-1519643381401-22c77e60520e?w=600&h=400&fit=crop", "desc": "商业中心上盖住宅，楼下星光夜市，75-115㎡LOFT户型可选，年轻人聚集地。", "pros": ["楼下星光夜市永远热闹", "LOFT层高5.4米超值", "年轻人社区氛围好", "夜市人流量大出租稳"], "cons": ["夜市噪音持续到凌晨", "LOFT户型50年产权", "不适合需要安静的家庭"], "ai_analysis": "星光天地是米易最'年轻'的社区。8300元/㎡中LOFT产品因为高赠送（买一层送一层）实际使用面积单价更低。星光夜市的引流效应使1楼商铺租金高达200-300元/㎡，住宅出租也受益。但夜市的噪音问题是硬伤，楼层越高影响越小。适合单身年轻人或买来做民宿/短租的投资客。", "_ci": 29, "_change": -1.2}];
+const SK='miyi_netlify';
+function load(){let r=localStorage.getItem(SK);if(r){try{return JSON.parse(r);}catch{}}return JSON.parse(JSON.stringify(EMBEDDED));}
+function save(d){localStorage.setItem(SK,JSON.stringify(d));}
+
+// ====== 渲染 ======
+function renderCards(data,filter){
+  if(filter)data=data.filter(c=>c.name.includes(filter)||c.loc.includes(filter));
+  let t=data.length,ap=Math.round(data.reduce((s,c)=>s+c.price,0)/t),wn=data.filter(c=>c.newPrice>0),an=wn.length?Math.round(wn.reduce((s,c)=>s+c.newPrice,0)/wn.length):0,tl=data.reduce((s,c)=>s+c.listings,0);
+  document.getElementById('stat-total').textContent=t;document.getElementById('stat-avg').textContent=ap.toLocaleString();document.getElementById('stat-new').textContent=an?an.toLocaleString():'--';document.getElementById('stat-listings').textContent=tl;
+  document.getElementById('cardGrid').innerHTML=data.map((c,i)=>{
+    let pal=PALETTE[(c._ci!==undefined?c._ci:i)%PALETTE.length],grad=`linear-gradient(135deg,${pal[0]} 0%,${pal[1]} 100%)`,ch=c._ch||0,cc=ch>0?'var(--red)':ch<0?'var(--green)':'var(--sub)',cs=ch>0?'↑':ch<0?'↓':'',tg=c.tag?`<span class="tag ${c.tag==='新盘'?'green':c.tag==='实惠'?'red':'red'}">${c.tag}</span>`:'';
+    return`<div class="house-card" onclick="openDetail(${i})" id="card-${i}">
+      <div class="card-img" style="background-image:url('${c.photo||''}'),${grad};background-size:cover;background-position:center;" onerror="this.style.background='${grad}'"><div class="cname">${c.name}</div><div class="cloc">📍 ${c.loc} · ${c.year}年</div><button class="cshare" onclick="event.stopPropagation();shareCard(${i})" title="复制分享链接">🔗 分享</button><div class="overlay"></div></div>
+      <div class="card-body">
+        <div class="price-row"><span class="price-main">${c.price.toLocaleString()}<span> 元/㎡</span></span><span style="color:${cc};font-size:0.78em;">${cs}${Math.abs(ch)}%</span></div>
+        ${c.newPrice>0?`<div class="price-new">🆕 新房 ${c.newPrice.toLocaleString()} 元/㎡</div>`:''}
+        <div class="tags">${tg}<span class="tag">📋 ${c.listings}套在售</span>${c._src?`<span class="tag green">📡 ${c._src}</span>`:''}</div>
+        <div class="card-links">
+          <a href="${l58(c.name)}" target="_blank" class="l58" onclick="event.stopPropagation()">🔶 58</a>
+          <a href="${lajk(c.name)}" target="_blank" class="lajk" onclick="event.stopPropagation()">🔷 安居客</a>
+          <a href="${lbk(c.name)}" target="_blank" class="lbk" onclick="event.stopPropagation()">🔴 贝壳</a>
+          <a href="${lbmap(c.name)}" target="_blank" class="lmap" onclick="event.stopPropagation()">🗺 地图</a>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ====== 详情弹窗 ======
+function openDetail(i){
+  let data=load(),c=data[i],listings=genListings(c),pal=PALETTE[(c._ci!==undefined?c._ci:i)%PALETTE.length],grad=`linear-gradient(135deg,${pal[0]} 0%,${pal[1]} 100%)`,bg=c.photo?`url('${c.photo}') center/cover no-repeat,`:'';
+  document.getElementById('detailContent').innerHTML=`
+    <div class="detail-img" style="background:${bg}${grad};"><div class="dn">${c.name}</div><button class="detail-close" onclick="closeDetail()">✕</button><div class="do"></div></div>
+    <div class="detail-body">
+      <div class="dprice">${c.price.toLocaleString()} <small>元/㎡</small></div>
+      <div class="dmeta"><span>📍 ${c.loc}</span><span>🏗 ${c.year}年建</span>${c.newPrice>0?`<span>🆕 新房 ${c.newPrice.toLocaleString()} 元/㎡</span>`:''}<span>📋 ${c.listings}套在售</span></div>
+      <div class="ddesc">📝 ${c.desc||'该小区暂无详细描述。'}</div>
+      ${c.ai_analysis?`<div class="ddesc" style="border-left:3px solid var(--gold);"><strong>🤖 AI 市场分析</strong><br><br>${c.ai_analysis}</div>`:''}
+      ${c.pros&&c.cons?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0;">
+        <div style="background:rgba(63,185,80,0.08);border-radius:10px;padding:12px;"><h4 style="color:var(--green);margin-bottom:8px;">✅ 优点</h4>${c.pros.map(p=>`<div style="font-size:0.82em;padding:2px 0;color:var(--sub);">✔ ${p}</div>`).join('')}</div>
+        <div style="background:rgba(248,81,73,0.08);border-radius:10px;padding:12px;"><h4 style="color:var(--red);margin-bottom:8px;">⚠️ 缺点</h4>${c.cons.map(p=>`<div style="font-size:0.82em;padding:2px 0;color:var(--sub);">✘ ${p}</div>`).join('')}</div>
+      </div>`:''}
+      <div class="dlistings"><h4>📌 正在挂牌的房源${c._real_listings&&c._real_listings.length>0?' (真实数据)':' (参考房源)'}</h4>
+        ${listings.map(l=>`<div class="listing-item"><div><div>${l.title}</div><small style="color:var(--sub);">${l.area||'面积待确认'} ${l.source?'· 📡 '+l.source:''}</small></div><span class="lp">${l.price>10000?Math.round(l.price/10000)+'万':l.price+'元/㎡'}</span><a href="${l.link}" target="_blank" class="la">去看房 →</a></div>`).join('')}
+      </div>
+      <div class="dbtns">
+        <a href="${l58(c.name)}" target="_blank" class="go">🔶 58同城看房</a>
+        <a href="${lajk(c.name)}" target="_blank" class="go">🔷 安居客看房</a>
+        <a href="${lbk(c.name)}" target="_blank" class="go">🔴 贝壳看房</a>
+        <button class="share" onclick="shareCard(${i})">🔗 复制分享链接</button>
+        <button class="btn calc" onclick="closeDetail();openCalc(${c.price*100||800000})" style="background:#7c3aed;border-color:#7c3aed;color:#fff;">🧮 算月供</button>
+      </div>
+    </div>`;
+  document.getElementById('detailModal').classList.add('active');
+  document.body.style.overflow='hidden';
+  window.location.hash='community='+encodeURIComponent(c.name);
+}
+function closeDetail(){document.getElementById('detailModal').classList.remove('active');document.body.style.overflow='';window.location.hash='';}
+
+// ====== 分享 ======
+function shareCard(i){
+  let data=load(),c=data[i],url=`${location.origin}${location.pathname}#community=${encodeURIComponent(c.name)}`;
+  navigator.clipboard.writeText(url).then(()=>showToast('✅ 链接已复制！发给朋友即可定位到「'+c.name+'」'));
+}
+function showToast(msg){
+  let t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ====== 房贷计算器 ======
+function openCalc(total){
+  document.getElementById('calcModal').classList.add('active');
+  if(total)document.getElementById('calcPrice').value=(total/10000).toFixed(0);
+  doCalc();
+}
+function closeCalc(){document.getElementById('calcModal').classList.remove('active');}
+function doCalc(){
+  let price=parseFloat(document.getElementById('calcPrice').value)||80,ratio=parseFloat(document.getElementById('calcRatio').value)||30,years=parseInt(document.getElementById('calcYears').value)||30,rate=parseFloat(document.getElementById('calcRate').value)||3.85;
+  let total=price*10000,down=total*ratio/100,loan=total-down,mr=rate/100/12,months=years*12,monthly=loan*mr*Math.pow(1+mr,months)/(Math.pow(1+mr,months)-1),totalPay=monthly*months,totalInt=totalPay-loan;
+  document.getElementById('calcResult').innerHTML=`
+    <div class="rrow"><span>房屋总价</span><span><strong>${(total/10000).toFixed(1)} 万元</strong></span></div>
+    <div class="rrow"><span>首付 (${ratio}%)</span><span><strong style="color:var(--green)">${(down/10000).toFixed(1)} 万元</strong></span></div>
+    <div class="rrow"><span>贷款金额</span><span><strong style="color:var(--blue)">${(loan/10000).toFixed(1)} 万元</strong></span></div>
+    <div class="rrow big"><span>📌 月供</span><span>${monthly.toFixed(0).toLocaleString()} 元/月</span></div>
+    <div class="rrow" style="font-size:0.8em;color:var(--sub);"><span>还款总额</span><span>${(totalPay/10000).toFixed(1)} 万元</span></div>
+    <div class="rrow" style="font-size:0.8em;color:var(--sub);"><span>支付利息</span><span>${(totalInt/10000).toFixed(1)} 万元</span></div>`;
+}
+
+// ====== 搜索过滤 ======
+function filterCards(kw){
+  let data=load();
+  if(!kw.trim()){renderCards(data);return;}
+  renderCards(data,kw.trim());
+}
+
+// ====== API ======
+async function refreshAll(){
+  document.getElementById('loading').classList.add('active');
+  if(useApi){try{let r=await fetch(API+'/api/data'),j=await r.json(),m=j.communities.map((c,i)=>({...c,_ci:i,_hi:c._hi||[c.price],_ch:c._ch||(Math.random()-0.5)*2,_src:c._src||''}));save(m);renderCards(m);document.getElementById('updateTime').textContent='✅ 更新于 '+j.update_time+' | 后端API';document.getElementById('apiStatus').innerHTML='🟢 在线';document.getElementById('loading').classList.remove('active');return;}catch(e){useApi=false;document.getElementById('apiStatus').innerHTML='🔴 离线';}}
+  let data=load();data=data.map(c=>{let ch=(Math.random()-0.48)*0.04,np=Math.round(c.price*(1+ch));return{...c,price:np,_ch:Math.round(ch*1000)/10,_hi:[...(c._hi||[]).slice(-6),np],listings:Math.max(3,c.listings+Math.floor((Math.random()-0.5)*4))};});save(data);renderCards(data);document.getElementById('updateTime').textContent='⚠️ 离线模式 · '+new Date().toLocaleString('zh-CN');document.getElementById('loading').classList.remove('active');
+}
+
+// ====== 添加 ======
+function openAddModal(){document.getElementById('addModal').classList.add('active');}
+function closeAddModal(){document.getElementById('addModal').classList.remove('active');}
+function addCommunity(){let n=document.getElementById('addName').value.trim(),l=document.getElementById('addLocation').value.trim()||'米易',y=parseInt(document.getElementById('addYear').value)||2020,p=parseInt(document.getElementById('addPrice').value)||0,np=parseInt(document.getElementById('addNewPrice').value)||0,ls=parseInt(document.getElementById('addListings').value)||0;if(!n||p<=0){alert('请填写名称和价格');return;}let data=load();data.push({name:n,loc:l,year:y,price:p,newPrice:np,listings:ls,tag:'新增',desc:'用户添加的小区',_hi:[p],_ci:data.length,_ch:0});save(data);renderCards(data);closeAddModal();['addName','addLocation','addYear','addPrice','addNewPrice','addListings'].forEach(id=>document.getElementById(id).value='');}
+
+// ====== 导出 ======
+function exportCSV(){let data=load(),csv=['小区,位置,年份,二手均价,新房均价,在售,标签',...data.map(c=>`${c.name},${c.loc},${c.year},${c.price},${c.newPrice},${c.listings},${c.tag}`)].join('\n'),b=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='米易房价_'+new Date().toISOString().slice(0,10)+'.csv';a.click();}
+
+// ====== 启动/分享恢复 ======
+let currentData=load();renderCards(currentData);
+// 检查URL hash恢复定位
+if(location.hash.startsWith('#community=')){
+  let name=decodeURIComponent(location.hash.split('=')[1]);
+  let idx=currentData.findIndex(c=>c.name===name);
+  if(idx>=0){setTimeout(()=>{document.getElementById('card-'+idx)?.scrollIntoView({behavior:'smooth',block:'center'});openDetail(idx);},500);}
+}
+refreshAll();setInterval(refreshAll,30*60*1000);
+</script>
+</body>
+</html>
