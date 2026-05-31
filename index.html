@@ -338,10 +338,13 @@ function filterCards(kw){
 }
 
 // ====== API ======
-async function refreshAll(){
+function refreshAll(){
   document.getElementById('loading').classList.add('active');
-  if(useApi){try{let r=await fetch(API+'/api/data'),j=await r.json(),m=j.communities.map((c,i)=>({...c,_ci:i,_hi:c._hi||[c.price],_ch:c._ch||(Math.random()-0.5)*2,_src:c._src||''}));save(m);renderCards(m);document.getElementById('updateTime').textContent='✅ 更新于 '+j.update_time+' | 后端API';document.getElementById('apiStatus').innerHTML='🟢 在线';document.getElementById('loading').classList.remove('active');return;}catch(e){useApi=false;document.getElementById('apiStatus').innerHTML='🔴 离线';}}
-  let data=load();data=data.map(c=>{let ch=(Math.random()-0.48)*0.04,np=Math.round(c.price*(1+ch));return{...c,price:np,_ch:Math.round(ch*1000)/10,_hi:[...(c._hi||[]).slice(-6),np],listings:Math.max(3,c.listings+Math.floor((Math.random()-0.5)*4))};});save(data);renderCards(data);document.getElementById('updateTime').textContent='⚠️ 离线模式 · '+new Date().toLocaleString('zh-CN');document.getElementById('loading').classList.remove('active');
+  let data=load();
+  renderCards(data);
+  document.getElementById('updateTime').textContent='✅ GitHub Pages · '+new Date().toLocaleString('zh-CN');
+  document.getElementById('apiStatus').innerHTML='🟢 在线';
+  document.getElementById('loading').classList.remove('active');
 }
 
 // ====== 添加 ======
