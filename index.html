@@ -140,6 +140,36 @@
   /* toast */
   .toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 24px;border-radius:24px;font-size:0.85em;z-index:500;opacity:0;transition:opacity 0.3s;box-shadow:var(--shadow-lg);}
   .toast.show{opacity:1;}
+
+  /* 对比模式 */
+  .card-compare{display:none;position:absolute;top:10px;left:12px;z-index:3;width:22px;height:22px;border-radius:6px;border:2px solid #fff;background:rgba(255,255,255,0.3);cursor:pointer;}
+  .compare-mode .card-compare{display:block;}
+  .compare-mode .card-compare.checked{background:var(--gold);border-color:var(--gold);}
+  .compare-mode .card-compare.checked::after{content:'✓';color:#fff;font-size:13px;font-weight:700;position:absolute;top:-1px;left:3px;}
+  .compare-bar{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100;background:var(--text);color:#fff;padding:10px 24px;border-radius:24px;box-shadow:0 8px 30px rgba(0,0,0,0.25);align-items:center;gap:14px;font-size:0.9em;}
+  .compare-bar.active{display:flex;}
+  .compare-bar button{border:none;padding:7px 18px;border-radius:20px;cursor:pointer;font-weight:600;font-size:0.85em;}
+  .compare-bar .go{background:var(--gold);color:#fff;}
+  .compare-bar .clear{background:transparent;color:#fff;text-decoration:underline;}
+
+  /* 购房攻略 */
+  .guide-section{max-width:1400px;margin:0 auto;padding:0 20px 40px;}
+  .guide-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+  .guide-card{background:var(--card);border-radius:14px;padding:20px;box-shadow:var(--shadow);cursor:pointer;transition:all 0.2s;border:1px solid var(--border);}
+  .guide-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px);border-color:var(--gold);}
+  .guide-card .icon{font-size:2em;margin-bottom:8px;}
+  .guide-card h4{font-size:1em;margin-bottom:6px;color:var(--text);}
+  .guide-card p{font-size:0.78em;color:var(--sub);line-height:1.6;}
+
+  /* 小红书/抖音评价链接 */
+  .review-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .review-links a{padding:5px 12px;border-radius:20px;font-size:0.72em;text-decoration:none;font-weight:500;transition:all 0.15s;}
+  .review-links a.xhs{background:#fff0f0;color:#ff2442;border:1px solid #ffe0e0;}
+  .review-links a.xhs:hover{background:#ff2442;color:#fff;}
+  .review-links a.dy{background:#f0f0ff;color:#fe2c55;border:1px solid #e0e0ff;}
+  .review-links a.dy:hover{background:#fe2c55;color:#fff;}
+  .review-links a.bd{background:#f5f0ff;color:#6b5ce7;border:1px solid #e8e0ff;}
+  .review-links a.bd:hover{background:#6b5ce7;color:#fff;}
 </style>
 </head>
 <body>
@@ -162,6 +192,8 @@
   <button class="btn accent" onclick="openAddModal()">➕ 添加</button>
   <button class="btn warn" onclick="exportCSV()">📥 导出</button>
   <button class="btn calc" onclick="openCalc()">🧮 房贷计算</button>
+  <button class="btn" id="compareBtn" onclick="toggleCompare()">📊 小区对比</button>
+  <button class="btn" onclick="showGuide()" style="background:#fff0e6;border-color:#e8c89e;color:var(--gold);">📖 购房攻略</button>
   <span class="spacer"></span>
   <input class="search-box" placeholder="🔍 搜索小区…" oninput="filterCards(this.value)" id="searchInput">
   <span class="hint" id="apiStatus">⚫ 检测中</span>
@@ -170,7 +202,24 @@
 <div class="section-title">📋 点卡片查看详情 | 底部链接直达房源平台</div>
 <div class="card-grid" id="cardGrid"><div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--sub);">加载中…</div></div>
 
-<footer>58同城 · 安居客 · 贝壳找房 · 闲鱼 | 仅展示公开价格数据</footer>
+<!-- 对比浮栏 -->
+<div class="compare-bar" id="compareBar">
+  <span id="compareCount">已选 0 个小区</span>
+  <button class="go" onclick="doCompare()">📊 开始对比</button>
+  <button class="clear" onclick="clearCompare()">清空</button>
+</div>
+
+<footer>58同城 · 安居客 · 贝壳找房 | 仅展示公开参考价格</footer>
+
+<!-- ====== 对比弹窗 ====== -->
+<div class="modal-overlay" id="compareModal" onclick="if(event.target===this)closeCompareModal()">
+  <div class="modal-detail" id="compareContent"></div>
+</div>
+
+<!-- ====== 攻略弹窗 ====== -->
+<div class="modal-overlay" id="guideModal" onclick="if(event.target===this)closeGuide()">
+  <div class="modal-detail" id="guideContent" style="max-width:780px;"></div>
+</div>
 
 <!-- ====== 详情弹窗 ====== -->
 <div class="modal-overlay" id="detailModal" onclick="if(event.target===this)closeDetail()">
@@ -265,7 +314,7 @@ function renderCards(data,filter){
   document.getElementById('cardGrid').innerHTML=data.map((c,i)=>{
     let pal=PALETTE[(c._ci!==undefined?c._ci:i)%PALETTE.length],grad=`linear-gradient(135deg,${pal[0]} 0%,${pal[1]} 100%)`,ch=c._ch||0,cc=ch>0?'var(--red)':ch<0?'var(--green)':'var(--sub)',cs=ch>0?'↑':ch<0?'↓':'',tg=c.tag?`<span class="tag ${c.tag==='新盘'?'green':c.tag==='实惠'?'red':'red'}">${c.tag}</span>`:'';
     return`<div class="house-card" onclick="openDetail(${i})" id="card-${i}">
-      <div class="card-img" style="background-image:url('${c.photo||''}'),${grad};background-size:cover;background-position:center;" onerror="this.style.background='${grad}'"><div class="cname">${c.name}</div><div class="cloc">📍 ${c.loc} · ${c.year}年</div><button class="cshare" onclick="event.stopPropagation();shareCard(${i})" title="复制分享链接">🔗 分享</button><div class="overlay"></div></div>
+      <div class="card-img" style="background-image:url('${c.photo||''}'),${grad};background-size:cover;background-position:center;" onerror="this.style.background='${grad}'"><div class="card-compare" onclick="event.stopPropagation();toggleCardCompare(${i})" title="加入对比"></div><div class="cname">${c.name}</div><div class="cloc">📍 ${c.loc} · ${c.year}年</div><button class="cshare" onclick="event.stopPropagation();shareCard(${i})" title="复制分享链接">🔗 分享</button><div class="overlay"></div></div>
       <div class="card-body">
         <div class="price-row"><span class="price-main">${c.price.toLocaleString()}<span> 元/㎡</span></span><span style="color:${cc};font-size:0.78em;">${cs}${Math.abs(ch)}%</span></div>
         ${c.newPrice>0?`<div class="price-new">🆕 新房 ${c.newPrice.toLocaleString()} 元/㎡</div>`:''}
@@ -290,6 +339,11 @@ function openDetail(i){
     <div class="detail-body">
       <div class="dprice">${c.price.toLocaleString()} <small>元/㎡</small></div>
       <div class="dmeta"><span>📍 ${c.loc}</span><span>🏗 ${c.year}年建</span>${c.newPrice>0?`<span>🆕 新房 ${c.newPrice.toLocaleString()} 元/㎡</span>`:''}<span>📋 ${c.listings}套在售</span></div>
+      <div class="review-links">
+        <a href="https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent('米易'+c.name+'小区')}" target="_blank" class="xhs">📕 小红书评价</a>
+        <a href="https://www.douyin.com/search/${encodeURIComponent('米易'+c.name+'小区')}" target="_blank" class="dy">🎵 抖音评价</a>
+        <a href="https://www.baidu.com/s?wd=${encodeURIComponent('米易'+c.name+'小区 住户评价')}" target="_blank" class="bd">🔍 百度口碑</a>
+      </div>
       ${trendHTML(c)}
       <div class="ddesc">📝 ${c.desc||'该小区暂无详细描述。'}</div>
       ${c.ai_analysis?`<div class="ddesc" style="border-left:3px solid var(--gold);"><strong>🤖 AI 市场分析</strong><br><br>${c.ai_analysis}</div>`:''}
@@ -392,6 +446,76 @@ function trendHTML(c){
   for(var j=0;j<months.length;j++){labels+='<span>'+months[j]+'</span>';}
   return '<div class="ddesc"><strong>📈 近12个月价格走势</strong><div class="trend-chart">'+bars+'</div><div class="trend-labels">'+labels+'</div><div style="margin-top:6px;display:flex;justify-content:space-between;font-size:0.75em;"><span style="color:var(--red);">最高: '+max.toLocaleString()+'</span><span style="color:var(--green);">最低: '+min.toLocaleString()+'</span><span>当前: '+c.price.toLocaleString()+'</span></div></div>';
 }
+
+// ====== 小区对比 ======
+var compareList=[];
+function toggleCompare(){
+  var grid=document.getElementById('cardGrid'),btn=document.getElementById('compareBtn');
+  grid.classList.toggle('compare-mode');btn.classList.toggle('primary',grid.classList.contains('compare-mode'));
+  if(!grid.classList.contains('compare-mode')){clearCompare();}
+}
+function updateCompareBar(){
+  document.getElementById('compareCount').textContent='已选 '+compareList.length+' 个小区';
+  document.getElementById('compareBar').classList.toggle('active',compareList.length>=2);
+}
+function toggleCardCompare(i){
+  var idx=compareList.indexOf(i);
+  if(idx>=0){compareList.splice(idx,1);}
+  else if(compareList.length<4){compareList.push(i);}
+  updateCompareBar();renderCompareChecks();
+}
+function renderCompareChecks(){
+  document.querySelectorAll('.card-compare').forEach(function(el,i){
+    el.classList.toggle('checked',compareList.indexOf(i)>=0);
+  });
+}
+function clearCompare(){compareList=[];updateCompareBar();renderCompareChecks();}
+function doCompare(){
+  var data=load(),selected=compareList.map(function(i){return data[i];});
+  if(selected.length<2)return;
+  var rows='<table style="width:100%;border-collapse:collapse;font-size:0.85em;"><thead><tr style="border-bottom:2px solid var(--gold);"><th style="padding:10px;text-align:left;">指标</th>'+selected.map(function(c){return'<th style="padding:10px;text-align:center;">'+c.name+'</th>';}).join('')+'</tr></thead><tbody>';
+  var fields=[
+    {label:'价格(元/㎡)',key:'price',fmt:function(v){return v.toLocaleString();},color:true},
+    {label:'新房价格',key:'newPrice',fmt:function(v){return v>0?v.toLocaleString():'暂无';}},
+    {label:'位置',key:'loc',fmt:function(v){return v;}},
+    {label:'建成年份',key:'year',fmt:function(v){return v+'年';}},
+    {label:'在售房源',key:'listings',fmt:function(v){return v+'套';}},
+  ];
+  fields.forEach(function(f){
+    var vals=selected.map(function(c){return f.fmt(c[f.key]||0);});
+    if(f.color){
+      var prices=selected.map(function(c){return c[f.key]||0;}),min=Math.min.apply(null,prices);
+      rows+='<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;color:var(--sub);">'+f.label+'</td>'+vals.map(function(v,i){return'<td style="padding:8px;text-align:center;font-weight:'+(prices[i]===min?'bold':'normal')+';color:'+(prices[i]===min?'var(--green)':'var(--text)')+';">'+v+'</td>';}).join('')+'</tr>';
+    }else{
+      rows+='<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;color:var(--sub);">'+f.label+'</td>'+vals.map(function(v){return'<td style="padding:8px;text-align:center;">'+v+'</td>';}).join('')+'</tr>';
+    }
+  });
+  // 优缺点
+  rows+='<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;color:var(--sub);">✅ 优点</td>'+selected.map(function(c){return'<td style="padding:8px;font-size:0.8em;">'+(c.pros||[]).map(function(p){return'<div style="color:var(--green);padding:1px 0;">✔ '+p+'</div>';}).join('')+'</td>';}).join('')+'</tr>';
+  rows+='<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;color:var(--sub);">⚠️ 缺点</td>'+selected.map(function(c){return'<td style="padding:8px;font-size:0.8em;">'+(c.cons||[]).map(function(p){return'<div style="color:var(--red);padding:1px 0;">✘ '+p+'</div>';}).join('')+'</td>';}).join('')+'</tr>';
+  rows+='</tbody></table>';
+  document.getElementById('compareContent').innerHTML='<div class="detail-body"><h3 style="margin-bottom:16px;">📊 小区对比</h3>'+rows+'<div style="margin-top:16px;"><button onclick="closeCompareModal()" class="btn" style="background:var(--text);color:#fff;">关闭</button></div></div>';
+  document.getElementById('compareModal').classList.add('active');document.body.style.overflow='hidden';
+}
+function closeCompareModal(){document.getElementById('compareModal').classList.remove('active');document.body.style.overflow='';}
+
+// ====== 购房攻略 ======
+var GUIDES=[
+  {icon:'🏠',title:'米易买房全流程指南',content:'<p><strong>第一步：确认购房资格</strong><br>米易目前不限购，外地户口可直接购买。首套房首付最低20%，二套房30%。</p><p><strong>第二步：预算规划</strong><br>米易房价在5200-9800元/㎡区间。首套刚需推荐60-90㎡户型，总价35-65万。首付+税费+中介费约占总价25-30%。</p><p><strong>第三步：区域选择</strong><br>城北新区（7800-8700元/㎡）：新城配套好，行政中心加持<br>城南新区（7400-9800元/㎡）：发展潜力大，新盘多<br>攀莲镇（5200-5800元/㎡）：老城成熟，性价比高<br>河滨路（6900-9200元/㎡）：河景稀缺，适合改善</p><p><strong>第四步：看房要点</strong><br>重点看：采光（朝南最佳）、楼层（避开顶层/底层）、户型方正度、小区物业、周边噪音。</p><p><strong>第五步：签约注意事项</strong><br>二手房签约前务必查档（有无抵押/查封），核实房产证年限（满五唯一最省税）。税费约占总价3-8%。</p>'},
+  {icon:'💰',title:'米易各板块房价解析',content:'<p><strong>城北新区</strong>（均价7800-8700元/㎡）<br>米易当前最热板块。行政中心迁入带来稳定公务员购房需求，配套推进快。推荐关注：阳光水岸、时光水街、金域华府。</p><p><strong>城南新区</strong>（均价7400-9800元/㎡）<br>米易向南发展的主战场。碧桂园和翡翠湾将板块天花板拉到近万。中长期看好，但短期配套尚需时间。推荐关注：世纪春城、未来城。</p><p><strong>攀莲镇</strong>（均价5200-5800元/㎡）<br>老城区，配套最成熟，价格最低。适合预算紧张或追求性价比的购房者。房龄偏老，增值空间有限。</p><p><strong>河滨路/安宁河畔</strong>（均价6900-9200元/㎡）<br>河景资源不可复制。河滨印象、水岸华庭是顶级改善。安宁河畔、香缇丽舍是河景入门选择。</p><p><strong>丙谷镇方向</strong>（均价6200-6500元/㎡）<br>康养主题，空气好但偏远。适合养老或度假，不适合通勤刚需。</p>'},
+  {icon:'📋',title:'首次购房避坑指南',content:'<p><strong>1. 不要只看均价</strong><br>同一小区不同楼层、朝向、户型，单价差距可达10-20%。要用具体房源算账。</p><p><strong>2. 注意产权年限</strong><br>住宅70年，公寓40年。买二手房要核实剩余年限。</p><p><strong>3. 物业费是长期成本</strong><br>米易物业费从1.5元到4.5元/㎡不等。100㎡的房子一年物业费差距可达3600元。</p><p><strong>4. 二手房关注"满五唯一"</strong><br>满五年且唯一住房，免个人所得税。是二手房交易中最省税的条件。</p><p><strong>5. 实地看房至少两次</strong><br>白天看采光，晚上听噪音，雨天查漏水。不要只看一次就定。</p><p><strong>6. 中介费可以谈</strong><br>米易中介费一般1-2%，大额交易可以谈到1%以下。</p>'},
+  {icon:'🏦','title':'米易最新购房政策汇总',content:'<p><strong>首付比例</strong><br>首套房最低20%，二套房最低30%（2024年最新政策）。</p><p><strong>贷款利率</strong><br>首套房商业贷款约3.85-4.2%（随LPR浮动）。公积金贷款5年以上3.1%。建议优先用公积金，额度不够再组合贷款。</p><p><strong>契税</strong><br>首套90㎡以下1%，90㎡以上1.5%。二套统一3%。</p><p><strong>限购政策</strong><br>米易目前无限购，外地人可自由购买。</p><p><strong>落户政策</strong><br>购房即可落户攀枝花市。有小孩入学需求的优先选择学府花园（双学区）。</p><p><strong>公积金</strong><br>攀枝花公积金贷款上限：单人40万，夫妻60万。需要连续缴存6个月以上。</p>'},
+  {icon:'🔍',title:'如何判断一个小区的真实价值',content:'<p><strong>看成交而非挂牌</strong><br>挂牌价是卖家期望，成交价才是市场真实价格。58同城和贝壳可以看到部分成交记录。</p><p><strong>看出租比</strong><br>年租金÷总房价。米易大部分小区在3-4%。超过4%算不错的投资回报。</p><p><strong>看入住率</strong><br>晚上数亮灯率。入住率>80%说明社区成熟，<50%说明投资客多。</p><p><strong>看周边土地</strong><br>周边还有空地说明未来有新盘供应，可能对二手价格形成压制。周边已无空地则供应受限，价格有支撑。</p><p><strong>看物业口碑</strong><br>在小区门口问几个住户，物业好不好一问便知。物业差的小区3-5年后品质会明显下降。</p>'},
+];
+function showGuide(){
+  document.getElementById('guideContent').innerHTML='<div class="detail-body"><h3 style="margin-bottom:18px;">📖 米易购房攻略</h3><div class="guide-grid">'+GUIDES.map(function(g,i){return'<div class="guide-card" onclick="showGuideDetail('+i+')"><div class="icon">'+g.icon+'</div><h4>'+g.title+'</h4><p>'+g.content.replace(/<[^>]*>/g,'').substring(0,60)+'...</p></div>';}).join('')+'</div><div style="margin-top:18px;"><button onclick="closeGuide()" class="btn" style="background:var(--text);color:#fff;">关闭</button></div></div>';
+  document.getElementById('guideModal').classList.add('active');document.body.style.overflow='hidden';
+}
+function showGuideDetail(i){
+  var g=GUIDES[i];
+  document.getElementById('guideContent').innerHTML='<div class="detail-body"><h3 style="margin-bottom:12px;">'+g.icon+' '+g.title+'</h3>'+g.content+'<div style="margin-top:16px;display:flex;gap:8px;"><button onclick="showGuide()" class="btn">← 返回列表</button><button onclick="closeGuide()" class="btn" style="background:var(--text);color:#fff;">关闭</button></div></div>';
+}
+function closeGuide(){document.getElementById('guideModal').classList.remove('active');document.body.style.overflow='';}
 
 // ====== 导出 ======
 function exportCSV(){let data=load(),csv=['小区,位置,年份,二手均价,新房均价,在售,标签',...data.map(c=>`${c.name},${c.loc},${c.year},${c.price},${c.newPrice},${c.listings},${c.tag}`)].join('\n'),b=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='米易房价_'+new Date().toISOString().slice(0,10)+'.csv';a.click();}
