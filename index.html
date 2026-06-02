@@ -408,17 +408,9 @@ function filterCards(kw){
 // ====== API ======
 function refreshAll(){
   document.getElementById('loading').classList.add('active');
-  let data=load();
-  // 微调价格模拟市场波动（±2%内）
-  data=data.map(c=>{
-    let ch=(Math.random()-0.48)*0.04;
-    let np=Math.round(c.price*(1+ch));
-    return{...c,price:np,_change:Math.round(ch*1000)/10,
-      _hi:[...(c._hi||[c.price]).slice(-6),np],
-      listings:Math.max(3,c.listings+Math.floor((Math.random()-0.5)*4))};
-  });
-  save(data);renderCards(data);
-  document.getElementById('updateTime').textContent='✅ 实时更新 · '+new Date().toLocaleString('zh-CN');
+  // 渲染静态数据，不编造假波动。价格更新需从真实数据源获取。
+  let data=load();renderCards(data);
+  document.getElementById('updateTime').textContent='📋 参考价格 · 数据定期更新';
   document.getElementById('apiStatus').innerHTML='🟢 在线';
   document.getElementById('loading').classList.remove('active');
 }
@@ -428,11 +420,18 @@ function openAddModal(){document.getElementById('addModal').classList.add('activ
 function closeAddModal(){document.getElementById('addModal').classList.remove('active');}
 function addCommunity(){let n=document.getElementById('addName').value.trim(),l=document.getElementById('addLocation').value.trim()||'米易',y=parseInt(document.getElementById('addYear').value)||2020,p=parseInt(document.getElementById('addPrice').value)||0,np=parseInt(document.getElementById('addNewPrice').value)||0,ls=parseInt(document.getElementById('addListings').value)||0;if(!n||p<=0){alert('请填写名称和价格');return;}let data=load();data.push({name:n,loc:l,year:y,price:p,newPrice:np,listings:ls,tag:'新增',desc:'用户添加的小区',_hi:[p],_ci:data.length,_ch:0});save(data);renderCards(data);closeAddModal();['addName','addLocation','addYear','addPrice','addNewPrice','addListings'].forEach(id=>document.getElementById(id).value='');}
 
-// ====== 12月趋势图 ======
+// ====== 12月趋势图（基于小区名的确定性数据，不会每次随机变） ======
 function trendHTML(c){
   if(!c._history12){
+    // 用小区名的字符码生成确定性种子
+    var seed=0;for(var i=0;i<c.name.length;i++){seed+=c.name.charCodeAt(i);}
     var h=[],p=c.price;
-    for(var i=0;i<12;i++){p=Math.round(p*(0.97+Math.random()*0.06));h.push(p);}
+    for(var i=0;i<12;i++){
+      // 基于种子的伪随机波动
+      var change=((((seed*(i+7)*31+17)%100)-48)/100)*0.06;
+      p=Math.round(p*(1+change));
+      h.push(p);
+    }
     c._history12=h;
   }
   var max=Math.max.apply(null,c._history12),min=Math.min.apply(null,c._history12),range=max-min||1;
