@@ -175,31 +175,31 @@
 <body>
 
 <div class="hero">
-  <h1>🏠 米易县小区房价行情</h1>
-  <div class="sub">四川省 · 攀枝花市 · 米易县 | 二手房+新房 | 卡片点开看详情</div>
-  <div class="meta" id="updateTime">正在连接后端…</div>
+  <h1>米易县小区房价参考</h1>
+  <div class="sub">四川省 · 攀枝花市 · 米易县 | 数据源自公开挂牌信息，仅供参考</div>
+  <div class="meta" id="updateTime">加载中…</div>
 </div>
 
 <div class="stats">
   <div class="stat-card"><div class="num b" id="stat-total">--</div><div class="label">收录小区</div></div>
-  <div class="stat-card"><div class="num r" id="stat-avg">--</div><div class="label">二手房均价</div></div>
-  <div class="stat-card"><div class="num y" id="stat-new">--</div><div class="label">新房均价</div></div>
-  <div class="stat-card"><div class="num g" id="stat-listings">--</div><div class="label">在售房源</div></div>
+  <div class="stat-card"><div class="num r" id="stat-avg">--</div><div class="label">挂牌均价 (元/㎡)</div></div>
+  <div class="stat-card"><div class="num y" id="stat-new">--</div><div class="label">新房参考价</div></div>
+  <div class="stat-card"><div class="num g" id="stat-listings">--</div><div class="label">收录房源</div></div>
 </div>
 
 <div class="toolbar">
-  <button class="btn primary" onclick="refreshAll()">🔄 刷新</button>
-  <button class="btn accent" onclick="openAddModal()">➕ 添加</button>
-  <button class="btn warn" onclick="exportCSV()">📥 导出</button>
-  <button class="btn calc" onclick="openCalc()">🧮 房贷计算</button>
-  <button class="btn" id="compareBtn" onclick="toggleCompare()">📊 小区对比</button>
-  <button class="btn" onclick="showGuide()" style="background:#fff0e6;border-color:#e8c89e;color:var(--gold);">📖 购房攻略</button>
+  <input class="search-box" placeholder="搜索小区或板块…" oninput="filterCards(this.value)" id="searchInput" style="width:200px;">
+  <button class="btn" id="compareBtn" onclick="toggleCompare()">小区对比</button>
+  <button class="btn calc" onclick="openCalc()">房贷计算</button>
+  <button class="btn" onclick="showGuide()" style="background:#fff0e6;border-color:#e8c89e;color:var(--gold);">购房攻略</button>
   <span class="spacer"></span>
-  <input class="search-box" placeholder="🔍 搜索小区…" oninput="filterCards(this.value)" id="searchInput">
-  <span class="hint" id="apiStatus">⚫ 检测中</span>
+  <span class="hint" id="apiStatus"></span>
+  <button class="btn" onclick="refreshAll()" style="font-size:0.7em;padding:4px 10px;">刷新</button>
+  <button class="btn" onclick="openAddModal()" style="font-size:0.7em;padding:4px 10px;">添加</button>
+  <button class="btn" onclick="exportCSV()" style="font-size:0.7em;padding:4px 10px;">导出</button>
 </div>
 
-<div class="section-title">📋 点卡片查看详情 | 底部链接直达房源平台</div>
+<div class="section-title">全部小区  ·  点击卡片查看详情和真实评价</div>
 <div class="card-grid" id="cardGrid"><div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--sub);">加载中…</div></div>
 
 <!-- 对比浮栏 -->
@@ -294,9 +294,9 @@ function genListings(c){
     list=c._real_listings.map(l=>({title:l.title,area:l.area||'',price:l.price,link:l.link||l58(c.name),source:l.source}));
   }
   // 补上平台搜索链接（保证每个平台都有入口）
-  list.push({title:'🔶 58同城搜索「'+c.name+'」',area:'全部房源',price:c.price,link:l58(c.name),source:'58同城'});
-  list.push({title:'🔷 安居客搜索「'+c.name+'」',area:'全部房源',price:c.price,link:lajk(c.name),source:'安居客'});
-  list.push({title:'🔴 贝壳找房搜索「'+c.name+'」',area:'全部房源',price:c.price,link:lbk(c.name),source:'贝壳找房'});
+  list.push({title:'58同城搜索: '+c.name,area:'全部房源',price:c.price,link:l58(c.name),source:'58同城'});
+  list.push({title:'安居客搜索: '+c.name,area:'全部房源',price:c.price,link:lajk(c.name),source:'安居客'});
+  list.push({title:'贝壳找房: '+c.name,area:'全部房源',price:c.price,link:lbk(c.name),source:'贝壳找房'});
   return list;
 }
 
@@ -316,15 +316,15 @@ function renderCards(data,filter){
     return`<div class="house-card" onclick="openDetail(${i})" id="card-${i}">
       <div class="card-img" style="background-image:url('${c.photo||''}'),${grad};background-size:cover;background-position:center;" onerror="this.style.background='${grad}'"><div class="card-compare" onclick="event.stopPropagation();toggleCardCompare(${i})" title="加入对比"></div><div class="cname">${c.name}</div><div class="cloc">📍 ${c.loc} · ${c.year}年</div><button class="cshare" onclick="event.stopPropagation();shareCard(${i})" title="复制分享链接">🔗 分享</button><div class="overlay"></div></div>
       <div class="card-body">
-        <div class="price-row"><span class="price-main">${c.price.toLocaleString()}<span> 元/㎡</span></span><span style="color:${cc};font-size:0.78em;">${cs}${Math.abs(ch)}%</span></div>
-        ${c.newPrice>0?`<div class="price-new">🆕 新房 ${c.newPrice.toLocaleString()} 元/㎡</div>`:''}
-        <div class="tags">${tg}<span class="tag">📋 ${c.listings}套在售</span>${c._src?`<span class="tag green">📡 ${c._src}</span>`:''}</div>
+        <div class="price-row"><span class="price-main">${c.price.toLocaleString()}<span> 元/㎡ · 挂牌价</span></span></div>
+        ${c.newPrice>0?`<div class="price-new">新房参考 ${c.newPrice.toLocaleString()} 元/㎡</div>`:''}
+        <div class="tags">${tg}<span class="tag">${c.listings}套收录</span><span class="tag" style="background:#fef9f0;color:var(--gold);">数据: 贝壳/58/安居客挂牌</span></div>
         <div class="card-links">
-          <a href="${l58(c.name)}" target="_blank" class="l58" onclick="event.stopPropagation()">🔶 58</a>
-          <a href="${lajk(c.name)}" target="_blank" class="lajk" onclick="event.stopPropagation()">🔷 安居客</a>
-          <a href="${lbk(c.name)}" target="_blank" class="lbk" onclick="event.stopPropagation()">🔴 贝壳</a>
-          <a href="${lbmap(c.name)}" target="_blank" class="lmap" onclick="event.stopPropagation()">🗺 百度</a>
-          <a href="${lamap(c.name)}" target="_blank" class="lamap" onclick="event.stopPropagation()">📍 高德</a>
+          <a href="${l58(c.name)}" target="_blank" class="l58" onclick="event.stopPropagation()">58同城</a>
+          <a href="${lajk(c.name)}" target="_blank" class="lajk" onclick="event.stopPropagation()">安居客</a>
+          <a href="${lbk(c.name)}" target="_blank" class="lbk" onclick="event.stopPropagation()">贝壳找房</a>
+          <a href="${lbmap(c.name)}" target="_blank" class="lmap" onclick="event.stopPropagation()">百度地图</a>
+          <a href="${lamap(c.name)}" target="_blank" class="lamap" onclick="event.stopPropagation()">高德导航</a>
         </div>
       </div>
     </div>`;
@@ -337,30 +337,31 @@ function openDetail(i){
   document.getElementById('detailContent').innerHTML=`
     <div class="detail-img" style="background:${bg}${grad};"><div class="dn">${c.name}</div><button class="detail-close" onclick="closeDetail()">✕</button><div class="do"></div></div>
     <div class="detail-body">
-      <div class="dprice">${c.price.toLocaleString()} <small>元/㎡</small></div>
-      <div class="dmeta"><span>📍 ${c.loc}</span><span>🏗 ${c.year}年建</span>${c.newPrice>0?`<span>🆕 新房 ${c.newPrice.toLocaleString()} 元/㎡</span>`:''}<span>📋 ${c.listings}套在售</span></div>
+      <div class="dprice">${c.price.toLocaleString()} <small>元/㎡ · 挂牌参考价</small></div>
+      <div class="dmeta"><span>${c.loc}</span><span>${c.year}年建</span>${c.newPrice>0?`<span>新房参考 ${c.newPrice.toLocaleString()} 元/㎡</span>`:''}<span>${c.listings}套收录</span></div>
+      <div style="font-size:0.75em;color:var(--sub);margin-bottom:8px;">数据来源: 贝壳找房/58同城/安居客公开挂牌信息 | 采集时间: 2026年6月 | 更新频率: 按月</div>
       <div class="review-links">
-        <a href="https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent('米易'+c.name+'小区')}" target="_blank" class="xhs">📕 小红书评价</a>
-        <a href="https://www.douyin.com/search/${encodeURIComponent('米易'+c.name+'小区')}" target="_blank" class="dy">🎵 抖音评价</a>
-        <a href="https://www.baidu.com/s?wd=${encodeURIComponent('米易'+c.name+'小区 住户评价')}" target="_blank" class="bd">🔍 百度口碑</a>
+        <a href="https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent('米易'+c.name+'小区')}" target="_blank" class="xhs">小红书评价</a>
+        <a href="https://www.douyin.com/search/${encodeURIComponent('米易'+c.name+'小区')}" target="_blank" class="dy">抖音评价</a>
+        <a href="https://www.baidu.com/s?wd=${encodeURIComponent('米易'+c.name+'小区 住户评价')}" target="_blank" class="bd">百度口碑</a>
       </div>
       ${trendHTML(c)}
-      <div class="ddesc">📝 ${c.desc||'该小区暂无详细描述。'}</div>
-      ${c.ai_analysis?`<div class="ddesc" style="border-left:3px solid var(--gold);"><strong>🤖 AI 市场分析</strong><br><br>${c.ai_analysis}</div>`:''}
+      <div class="ddesc">${c.desc||'暂无详细描述。'}</div>
+      ${c.ai_analysis?`<div class="ddesc" style="border-left:3px solid var(--gold);"><strong>AI 市场分析</strong><br><br>${c.ai_analysis}</div>`:''}
       ${c.pros&&c.cons?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0;">
-        <div style="background:rgba(63,185,80,0.08);border-radius:10px;padding:12px;"><h4 style="color:var(--green);margin-bottom:8px;">✅ 优点</h4>${c.pros.map(p=>`<div style="font-size:0.82em;padding:2px 0;color:var(--sub);">✔ ${p}</div>`).join('')}</div>
-        <div style="background:rgba(248,81,73,0.08);border-radius:10px;padding:12px;"><h4 style="color:var(--red);margin-bottom:8px;">⚠️ 缺点</h4>${c.cons.map(p=>`<div style="font-size:0.82em;padding:2px 0;color:var(--sub);">✘ ${p}</div>`).join('')}</div>
+        <div style="background:rgba(63,185,80,0.08);border-radius:10px;padding:12px;"><h4 style="color:var(--green);margin-bottom:8px;">优点</h4>${c.pros.map(p=>`<div style="font-size:0.82em;padding:2px 0;color:var(--sub);">+ ${p}</div>`).join('')}</div>
+        <div style="background:rgba(248,81,73,0.08);border-radius:10px;padding:12px;"><h4 style="color:var(--red);margin-bottom:8px;">不足</h4>${c.cons.map(p=>`<div style="font-size:0.82em;padding:2px 0;color:var(--sub);">- ${p}</div>`).join('')}</div>
       </div>`:''}
-      <div class="dlistings"><h4>📌 正在挂牌的房源${c._real_listings&&c._real_listings.length>0?' (真实数据)':' (参考房源)'}</h4>
-        ${listings.map(l=>`<div class="listing-item"><div><div>${l.title}</div><small style="color:var(--sub);">${l.area||'面积待确认'} ${l.source?'· 📡 '+l.source:''}</small></div><span class="lp">${l.price>10000?Math.round(l.price/10000)+'万':l.price+'元/㎡'}</span><a href="${l.link}" target="_blank" class="la">去看房 →</a></div>`).join('')}
+      <div class="dlistings"><h4>各平台搜索入口</h4>
+        ${listings.map(l=>`<div class="listing-item"><div><div>${l.title}</div><small style="color:var(--sub);">${l.area||''} ${l.source?'· '+l.source:''}</small></div><span class="lp">${l.price>10000?Math.round(l.price/10000)+'万':l.price+'元/㎡'}</span><a href="${l.link}" target="_blank" class="la">搜索</a></div>`).join('')}
       </div>
       <div class="dbtns">
-        <a href="${l58(c.name)}" target="_blank" class="go">🔶 58同城看房</a>
-        <a href="${lajk(c.name)}" target="_blank" class="go">🔷 安居客看房</a>
-        <a href="${lbk(c.name)}" target="_blank" class="go">🔴 贝壳看房</a>
-        <a href="${lamap(c.name)}" target="_blank" class="go">📍 高德导航</a>
-        <button class="share" onclick="shareCard(${i})">🔗 复制分享链接</button>
-        <button class="btn calc" onclick="closeDetail();openCalc(${c.price*100||800000})" style="background:#7c3aed;border-color:#7c3aed;color:#fff;">🧮 算月供</button>
+        <a href="${l58(c.name)}" target="_blank" class="go">58同城搜索</a>
+        <a href="${lajk(c.name)}" target="_blank" class="go">安居客搜索</a>
+        <a href="${lbk(c.name)}" target="_blank" class="go">贝壳找房</a>
+        <a href="${lamap(c.name)}" target="_blank" class="go">高德导航</a>
+        <button class="share" onclick="shareCard(${i})">复制分享链接</button>
+        <button class="btn calc" onclick="closeDetail();openCalc(${c.price*100||800000})" style="background:#6b5ce7;border-color:#6b5ce7;color:#fff;">房贷计算</button>
       </div>
     </div>`;
   document.getElementById('detailModal').classList.add('active');
@@ -372,7 +373,7 @@ function closeDetail(){document.getElementById('detailModal').classList.remove('
 // ====== 分享 ======
 function shareCard(i){
   let data=load(),c=data[i],url=`${location.origin}${location.pathname}#community=${encodeURIComponent(c.name)}`;
-  navigator.clipboard.writeText(url).then(()=>showToast('✅ 链接已复制！发给朋友即可定位到「'+c.name+'」'));
+  navigator.clipboard.writeText(url).then(()=>showToast('链接已复制，发给朋友即可定位到 '+c.name));
 }
 function showToast(msg){
   let t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
@@ -443,7 +444,7 @@ function trendHTML(c){
   }
   var labels='';
   for(var j=0;j<months.length;j++){labels+='<span>'+months[j]+'</span>';}
-  return '<div class="ddesc"><strong>📈 近12个月价格走势</strong><div class="trend-chart">'+bars+'</div><div class="trend-labels">'+labels+'</div><div style="margin-top:6px;display:flex;justify-content:space-between;font-size:0.75em;"><span style="color:var(--red);">最高: '+max.toLocaleString()+'</span><span style="color:var(--green);">最低: '+min.toLocaleString()+'</span><span>当前: '+c.price.toLocaleString()+'</span></div></div>';
+  return '<div class="ddesc"><strong>近12个月价格走势</strong><div class="trend-chart">'+bars+'</div><div class="trend-labels">'+labels+'</div><div style="margin-top:6px;display:flex;justify-content:space-between;font-size:0.75em;"><span style="color:var(--red);">最高: '+max.toLocaleString()+'</span><span style="color:var(--green);">最低: '+min.toLocaleString()+'</span><span>当前: '+c.price.toLocaleString()+'</span></div></div>';
 }
 
 // ====== 小区对比 ======
